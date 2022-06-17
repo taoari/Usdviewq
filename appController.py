@@ -391,6 +391,12 @@ class AppController(QtCore.QObject):
                 self._deprecatedStatusFileNames = ('state', '.usdviewrc')
             self._mallocTags = parserData.mallocTagStats
 
+            from PySide2.QtCore import QUrl
+            from PySide2.QtMultimedia import QMediaPlayer, QMediaContent
+            self._player = QMediaPlayer()
+            media_content = QMediaContent(QUrl.fromLocalFile(parserData.audio))
+            self._player.setMedia(media_content)
+
             self._allowViewUpdates = True
 
             # When viewer mode is active, the panel sizes are cached so they can
@@ -1929,6 +1935,7 @@ class AppController(QtCore.QObject):
             # For performance, don't update the prim tree view while playing.
             self._primViewUpdateTimer.stop()
             self._playbackIndex = 0
+            self._player.play()
         else:
             self._ui.frameSlider.setTracking(self._ui.redrawOnScrub.isChecked())
             # Stop playback.
@@ -1941,6 +1948,12 @@ class AppController(QtCore.QObject):
             self._timer.stop()
             self._primViewUpdateTimer.start()
             self._updateOnFrameChange()
+            self._player.pause()
+        # print(self._ui.frameSlider.value())
+
+        # TODO: should be put into _advanceFrame function for perfect sync, however, sync every frame will cause artifacts in audio
+        value = self._ui.frameSlider.value() + 1
+        self._player.setPosition(1000 * value / self.framesPerSecond)
 
     def _advanceFrameForPlayback(self):
         sleep(max(0, 1. / self.framesPerSecond - (time() - self._lastFrameTime)))
@@ -1955,7 +1968,13 @@ class AppController(QtCore.QObject):
             self._fpsHUDInfo[HUDEntries.PLAYBACK] = "%.2f ms (%.2f FPS)" % (ms, fps)
 
         self._playbackIndex = (self._playbackIndex + 1) % 5
+
         self._advanceFrame()
+
+        # rewind for audio
+        value = self._ui.frameSlider.value() + 1
+        if value == 1:
+            self._player.setPosition(1000 * value / self.framesPerSecond)
 
     def _advanceFrame(self):
         if self._playbackAvailable:
@@ -1963,6 +1982,7 @@ class AppController(QtCore.QObject):
             if value > self._ui.frameSlider.maximum():
                 value = self._ui.frameSlider.minimum()
             self._ui.frameSlider.setValue(value)
+            
 
     def _retreatFrame(self):
         if self._playbackAvailable:

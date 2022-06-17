@@ -218,6 +218,9 @@ class Launcher(object):
                             dest='currentframe', type=int,
                             help='Set the current frame of the viewer')
 
+        parser.add_argument('--audio', type=str,
+                            help='Audio file name')
+
         UsdAppUtils.complexityArgs.AddCmdlineArgs(parser,
             altHelpText=(
                 'Set the initial mesh refinement complexity (%(default)s).'))
